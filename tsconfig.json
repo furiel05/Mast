@@ -1,0 +1,7 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    // テスト・E2E・設定ファイルは Node.js 上で動くため
+    "types": ["node"]
+  }
+}
