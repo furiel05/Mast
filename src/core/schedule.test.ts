@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { type DayRule, evaluate, validateSchedule, type WeeklySchedule } from './schedule';
+import {
+  type DayRule,
+  evaluate,
+  parseSchedule,
+  validateSchedule,
+  type WeeklySchedule,
+} from './schedule';
 
 const MIN = 60 * 1000;
 
@@ -272,5 +278,36 @@ describe('validateSchedule', () => {
       '土曜：時間帯の終わりは始まりより後にしてください',
       '土曜：予算は0〜1440分の整数で指定してください',
     ]);
+  });
+});
+
+describe('parseSchedule', () => {
+  const valid: WeeklySchedule = [
+    NONE,
+    timeWindow(20, 23),
+    budget(60),
+    combined(20, 23, 60),
+    NONE,
+    NONE,
+    NONE,
+  ];
+
+  it('正しい予約枠はそのまま返す', () => {
+    expect(parseSchedule(JSON.parse(JSON.stringify(valid)))).toEqual(valid);
+  });
+
+  it.each([
+    ['undefined', undefined],
+    ['配列でない', { type: 'none' }],
+    ['7日分ない', [NONE, NONE]],
+    ['知らない種類のルール', [{ type: 'forever' }, NONE, NONE, NONE, NONE, NONE, NONE]],
+    ['時間帯がない', [{ type: 'window' }, NONE, NONE, NONE, NONE, NONE, NONE]],
+    ['予算が文字列', [{ type: 'budget', budgetMinutes: '60' }, NONE, NONE, NONE, NONE, NONE, NONE]],
+    [
+      'ルールの誤り（終わりが始まりより前）',
+      [timeWindow(23, 20), NONE, NONE, NONE, NONE, NONE, NONE],
+    ],
+  ])('%s なら null', (_label, value) => {
+    expect(parseSchedule(value)).toBeNull();
   });
 });

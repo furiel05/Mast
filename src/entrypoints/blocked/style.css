@@ -1,0 +1,54 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: Canvas;
+  color: CanvasText;
+}
+
+main {
+  max-width: 32rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 1rem;
+}
+
+.next {
+  font-size: 1.125rem;
+  margin: 0 0 2rem;
+}
+
+button {
+  font: inherit;
+  padding: 0.6rem 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* 他サイトに埋め込まれている場合は、狭い枠に収まるよう小さくする */
+main.embedded {
+  padding: 1rem;
+}
+
+main.embedded h1 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+main.embedded .next {
+  font-size: 0.875rem;
+  margin: 0;
+}

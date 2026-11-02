@@ -9,6 +9,15 @@ export default defineConfig({
   manifest: {
     name: 'Mast',
     description: 'Watch-time limits for YouTube',
-    permissions: ['storage'],
+    permissions: ['storage', 'alarms', 'declarativeNetRequest'],
+    // ブロック画面への転送（declarativeNetRequest の redirect）に必要
+    host_permissions: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://youtu.be/*'],
+    web_accessible_resources: [
+      {
+        // YouTubeのページや、YouTubeを埋め込んだ他サイトから転送されてくるため
+        resources: ['blocked.html'],
+        matches: ['<all_urls>'],
+      },
+    ],
   },
 });
