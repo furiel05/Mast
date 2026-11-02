@@ -1,6 +1,8 @@
 {
   "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
+    // React の JSX（.tsx）を使うため
+    "jsx": "react-jsx",
     // テスト・E2E・設定ファイルは Node.js 上で動くため
     "types": ["node"]
   }

@@ -6,6 +6,7 @@ YouTube の視聴を予約枠の中だけに制限する Chrome 拡張機能（M
 ## 技術構成
 
 - WXT（Vite ベース）+ TypeScript。`srcDir` は `src`
+- 画面（設定画面・ブロック画面）は React（`@wxt-dev/module-react`）で描く。コンポーネントは `.tsx`
 - WXT の自動インポートは無効（`imports: false`）。`defineBackground` などは `wxt/utils/...` から、`browser` は `wxt/browser` から明示的に import する
 - lint・フォーマットは Biome（シングルクォート、スペース2つ、100桁）
 - ユニットテストは Vitest + `wxt/testing/fake-browser`、E2E は Playwright
