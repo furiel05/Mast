@@ -51,6 +51,8 @@ jobs:
         with:
           name: mast-chrome-mv3
           path: .output/*.zip
+          # .output は "." で始まる隠しフォルダなので、明示しないと対象外になる
+          include-hidden-files: true
           if-no-files-found: error
 
       - name: Upload Playwright report
