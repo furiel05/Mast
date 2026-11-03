@@ -40,7 +40,9 @@ npm run check
 src/
   core/         予約枠の判定・TOTP・日付計算などの純粋なロジック
   storage/      chrome.storage の読み書き
-  entrypoints/  拡張機能の入口（Service Worker、コンテンツスクリプト、設定画面など）。画面は React で描く
+  background/   Service Worker の処理（判定し直し、ブロックのオン・オフ、アラーム）
+  entrypoints/  拡張機能の入口（Service Worker、コンテンツスクリプト、設定画面、ブロック画面）。画面は React で描く
+  messages.ts   Service Worker とコンテンツスクリプトの間でやりとりする合図
 e2e/            E2E テスト（Playwright）
 docs/           仕様書
 ```

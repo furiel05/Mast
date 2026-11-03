@@ -131,6 +131,45 @@ function budgetMsOf(rule: DayRule): number | null {
   }
 }
 
+/**
+ * 保存されていた値を予約枠として読む。形が違うか、ルールに誤りがあれば null。
+ * chrome.storage の値は、古い版の拡張機能が書いたものや壊れたものの可能性があるため、必ずこれを通す
+ */
+export function parseSchedule(value: unknown): WeeklySchedule | null {
+  if (!Array.isArray(value) || value.length !== 7 || !value.every(isDayRule)) {
+    return null;
+  }
+  const schedule = value as unknown as WeeklySchedule;
+  return validateSchedule(schedule).length === 0 ? schedule : null;
+}
+
+function isDayRule(value: unknown): value is DayRule {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const rule = value as Record<string, unknown>;
+  switch (rule.type) {
+    case 'none':
+      return true;
+    case 'window':
+      return isTimeRange(rule.window);
+    case 'budget':
+      return typeof rule.budgetMinutes === 'number';
+    case 'combined':
+      return isTimeRange(rule.window) && typeof rule.budgetMinutes === 'number';
+    default:
+      return false;
+  }
+}
+
+function isTimeRange(value: unknown): value is TimeRange {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const range = value as Record<string, unknown>;
+  return typeof range.start === 'number' && typeof range.end === 'number';
+}
+
 /** ルールの誤りを、画面に出せる文で返す。誤りがなければ空の配列 */
 export function validateSchedule(schedule: WeeklySchedule): string[] {
   return schedule.flatMap((rule, weekday) =>
