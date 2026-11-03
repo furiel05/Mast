@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, formatNextAllowed, formatTimeOfDay } from './format';
+import { describeRule, formatDuration, formatNextAllowed, formatTimeOfDay } from './format';
 
 // 2026-11-02 は月曜日
 describe('formatNextAllowed', () => {
@@ -52,5 +52,18 @@ describe('formatDuration', () => {
     [65 * 60_000 + 30_000, '1時間5分'],
   ])('%i ミリ秒は %s', (ms, expected) => {
     expect(formatDuration(ms)).toBe(expected);
+  });
+});
+
+describe('describeRule', () => {
+  const window = { start: 20 * 60, end: 26 * 60 };
+
+  it.each([
+    [{ type: 'none' } as const, '見ない日'],
+    [{ type: 'window', window } as const, '20:00〜翌2:00'],
+    [{ type: 'budget', budgetMinutes: 60 } as const, '60分まで'],
+    [{ type: 'combined', window, budgetMinutes: 45 } as const, '20:00〜翌2:00のうち45分まで'],
+  ])('%o は「%s」', (rule, text) => {
+    expect(describeRule(rule)).toBe(text);
   });
 });

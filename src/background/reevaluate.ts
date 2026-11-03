@@ -1,12 +1,12 @@
 import { browser } from 'wxt/browser';
 import type { Verdict } from '../core/schedule';
 import { RELOAD_MESSAGE } from '../messages';
-import { loadVerdict } from '../storage/schedule-store';
+import { loadScheduleState, loadVerdict } from '../storage/schedule-store';
 import { loadPlayback } from '../storage/usage-store';
 import { BLOCK_RULE_ID, buildBlockRule } from './block-rule';
 import { stopAllPlayback } from './playback';
 
-/** 枠の終わり・予算を使い切る時刻・次の枠の始まりに判定し直すためのアラーム */
+/** 枠の終わり・予算を使い切る時刻・次の枠の始まり・予約中の変更が反映される時刻に判定し直すためのアラーム */
 export const REEVALUATE_ALARM = 'mast-reevaluate';
 
 /**
@@ -54,7 +54,12 @@ async function run(): Promise<void> {
   }
 
   await browser.alarms.clear(REEVALUATE_ALARM);
-  const next = verdict.allowed ? await allowedEnd(verdict, now) : verdict.nextAllowedAt;
+  const { pending } = await loadScheduleState(now);
+  const next = earliest([
+    verdict.allowed ? await allowedEnd(verdict, now) : verdict.nextAllowedAt,
+    // 反映されると、見られる時間が延びたり始まったりする
+    pending === null ? null : new Date(pending.effectiveAt),
+  ]);
   if (next !== null) {
     await browser.alarms.create(REEVALUATE_ALARM, { when: next.getTime() });
   }
@@ -70,6 +75,11 @@ async function allowedEnd(verdict: Verdict & { allowed: true }, now: Date): Prom
   }
   const exhaustedAt = now.getTime() + verdict.remainingMs;
   return new Date(Math.min(exhaustedAt, verdict.allowedUntil.getTime()));
+}
+
+function earliest(times: (Date | null)[]): Date | null {
+  const values = times.filter((time) => time !== null).map((time) => time.getTime());
+  return values.length === 0 ? null : new Date(Math.min(...values));
 }
 
 async function isBlocking(): Promise<boolean> {
