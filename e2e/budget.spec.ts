@@ -49,7 +49,8 @@ test('予算を使い切ると、再生中の YouTube がブロック画面に�
     timeout: 15_000,
   });
   await expect(page.getByRole('heading', { name: '今日の視聴時間を使い切りました' })).toBeVisible();
-  await expect(page.getByText(/次に見られるのは 明日（.）4:00 から/)).toBeVisible();
+  // 予算は次の朝4時にリセットされる。0時〜4時に実行すると、それは「今日」の4時になる
+  await expect(page.getByText(/次に見られるのは (今日 |明日（.）)4:00 から/)).toBeVisible();
 });
 
 test('予算を使い切っていたら、YouTube を開いてもブロック画面になる', async ({
