@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import path from 'node:path';
 import { type BrowserContext, test as base, chromium, type Worker } from '@playwright/test';
 import type { browser } from 'wxt/browser';
@@ -59,6 +60,26 @@ export function logicalWeekday(): number {
   return new Date(now.getTime() - (now.getHours() < 4 ? 24 * 60 * 60 * 1000 : 0)).getDay();
 }
 
+/** 承認コードの秘密鍵（Base32）。RFC 6238 のテストで使う "12345678901234567890" */
+export const TOTP_SECRET = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+
+/**
+ * 認証アプリの代わりに、今のTOTPコードを作る。
+ * 拡張機能の実装（src/core/totp.ts）を使わず、Node.js の crypto で別に計算して突き合わせる
+ */
+export function totpCode(secretBase32: string): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const bits = [...secretBase32.replace(/\s/g, '')]
+    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, '0'))
+    .join('');
+  const key = Buffer.from(bits.match(/.{8}/g)?.map((byte) => Number.parseInt(byte, 2)) ?? []);
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
+  const hmac = createHmac('sha1', key).update(counter).digest();
+  const offset = (hmac.at(-1) ?? 0) & 0x0f;
+  return String((hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, '0');
+}
+
 /** E2E テストで使う端末ID。視聴時間の記録のキーを決めるため、拡張機能が作る前に保存しておく */
 const DEVICE_ID = 'e2e-device';
 
@@ -74,6 +95,8 @@ type Fixtures = {
   setTodayUsage: (ms: number) => Promise<void>;
   /** この端末の視聴時間の記録の合計（ミリ秒） */
   recordedUsage: () => Promise<number>;
+  /** 承認コードの初回セットアップを済ませた状態にする。秘密鍵は TOTP_SECRET */
+  registerTotp: () => Promise<void>;
 };
 
 export const test = base.extend<Fixtures>({
@@ -150,6 +173,15 @@ export const test = base.extend<Fixtures>({
           await chrome.storage.sync.set({ [key]: ms });
         },
         { ms, deviceId: DEVICE_ID },
+      );
+    });
+  },
+
+  registerTotp: async ({ serviceWorker }, use) => {
+    await use(async () => {
+      await serviceWorker.evaluate(
+        (secret) => chrome.storage.sync.set({ totpSecret: secret }),
+        TOTP_SECRET,
       );
     });
   },

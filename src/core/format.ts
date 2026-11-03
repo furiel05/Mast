@@ -1,3 +1,5 @@
+import type { DayRule, TimeRange } from './schedule';
+
 const WEEKDAY_SHORT = ['日', '月', '火', '水', '木', '金', '土'] as const;
 
 /**
@@ -44,4 +46,25 @@ export function formatDuration(ms: number): string {
     return `${minutes}分`;
   }
   return minutes === 0 ? `${hours}時間` : `${hours}時間${minutes}分`;
+}
+
+/**
+ * 1日分のルールを短い文にする。予約中の変更の内容を見せるのに使う。
+ * 例：「見ない日」「20:00〜23:00」「60分まで」「20:00〜23:00のうち60分まで」
+ */
+export function describeRule(rule: DayRule): string {
+  switch (rule.type) {
+    case 'none':
+      return '見ない日';
+    case 'window':
+      return describeRange(rule.window);
+    case 'budget':
+      return `${rule.budgetMinutes}分まで`;
+    case 'combined':
+      return `${describeRange(rule.window)}のうち${rule.budgetMinutes}分まで`;
+  }
+}
+
+function describeRange(range: TimeRange): string {
+  return `${formatTimeOfDay(range.start)}〜${formatTimeOfDay(range.end)}`;
 }

@@ -3,7 +3,7 @@ import { defineBackground } from 'wxt/utils/define-background';
 import { checkpointPlayback, frameKey, updateFramePlaying } from '../background/playback';
 import { REEVALUATE_ALARM, reevaluate, SAFETY_ALARM } from '../background/reevaluate';
 import { isPlaybackMessage } from '../messages';
-import { SCHEDULE_KEY } from '../storage/schedule-store';
+import { PENDING_CHANGE_KEY, SCHEDULE_KEY } from '../storage/schedule-store';
 import { pruneUsage } from '../storage/usage-store';
 
 export default defineBackground(() => {
@@ -36,9 +36,9 @@ export default defineBackground(() => {
 
   browser.action.onClicked.addListener(() => void browser.runtime.openOptionsPage());
 
-  // 予約枠が変わったら、すぐに判定し直す
+  // 予約枠か予約中の変更が変わったら、すぐに判定し直す
   browser.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === 'sync' && SCHEDULE_KEY in changes) {
+    if (areaName === 'sync' && (SCHEDULE_KEY in changes || PENDING_CHANGE_KEY in changes)) {
       void reevaluate();
     }
   });

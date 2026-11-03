@@ -39,12 +39,6 @@ p {
   margin: 0.5rem 0 1rem;
 }
 
-.status {
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-}
-
 .status .verdict {
   font-weight: 600;
   font-size: 1.0625rem;
@@ -134,4 +128,61 @@ button.primary {
 button:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+.card {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+.card .actions {
+  margin: 0.75rem 0 0;
+}
+
+.setup {
+  border-color: var(--warning);
+}
+
+.setup ol {
+  padding-left: 1.25rem;
+}
+
+.setup li {
+  margin: 0.75rem 0;
+}
+
+.warning {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.qr {
+  display: block;
+  width: 200px;
+  height: 200px;
+  margin: 0.75rem 0;
+}
+
+.secret {
+  display: block;
+  margin: 0.5rem 0;
+  font-size: 1.0625rem;
+  letter-spacing: 0.05em;
+  user-select: all;
+}
+
+input.code {
+  width: 7rem;
+  letter-spacing: 0.1em;
+}
+
+.pending ul {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
 }
