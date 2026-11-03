@@ -10,6 +10,8 @@ export default defineConfig({
     name: 'Mast',
     description: 'Watch-time limits for YouTube',
     permissions: ['storage', 'alarms', 'declarativeNetRequest'],
+    // ツールバーのアイコンをクリックしたら設定画面を開く（background.ts）
+    action: { default_title: 'Mast の設定を開く' },
     // ブロック画面への転送（declarativeNetRequest の redirect）に必要
     host_permissions: ['*://*.youtube.com/*', '*://*.youtube-nocookie.com/*', '*://youtu.be/*'],
     web_accessible_resources: [

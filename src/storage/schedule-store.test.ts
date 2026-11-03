@@ -3,7 +3,7 @@ import { browser } from 'wxt/browser';
 import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { DEFAULT_SCHEDULE } from '../core/default-schedule';
 import type { WeeklySchedule } from '../core/schedule';
-import { loadSchedule, loadVerdict } from './schedule-store';
+import { loadSchedule, loadVerdict, saveSchedule } from './schedule-store';
 
 const NONE = { type: 'none' } as const;
 const ALWAYS: WeeklySchedule = Array(7).fill({
@@ -28,6 +28,30 @@ describe('loadSchedule', () => {
   it('壊れた値が保存されていたら初期値を返す', async () => {
     await browser.storage.sync.set({ schedule: [NONE] });
     expect(await loadSchedule()).toEqual(DEFAULT_SCHEDULE);
+  });
+});
+
+describe('saveSchedule', () => {
+  beforeEach(() => {
+    fakeBrowser.reset();
+  });
+
+  it('storage.sync に保存し、読み直せる', async () => {
+    await saveSchedule(ALWAYS);
+    expect(await browser.storage.sync.get('schedule')).toEqual({ schedule: ALWAYS });
+    expect(await loadSchedule()).toEqual(ALWAYS);
+  });
+
+  it('誤りのある予約枠は保存しない', async () => {
+    const broken = [
+      { type: 'window', window: { start: 23 * 60, end: 20 * 60 } },
+      ...ALWAYS.slice(1),
+    ] as unknown as WeeklySchedule;
+
+    await expect(saveSchedule(broken)).rejects.toThrow(
+      '日曜：時間帯の終わりは始まりより後にしてください',
+    );
+    expect(await browser.storage.sync.get(null)).toEqual({});
   });
 });
 

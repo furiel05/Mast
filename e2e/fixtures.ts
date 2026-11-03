@@ -53,6 +53,12 @@ export const BLOCK_ALL: DayRule[] = Array(7).fill(NONE);
 /** 毎日1分まで見られる予約枠 */
 export const BUDGET_1_MINUTE: DayRule[] = Array(7).fill({ type: 'budget', budgetMinutes: 1 });
 
+/** 4時区切りで見た今日の曜日（src/core/day.ts）。0 が日曜 */
+export function logicalWeekday(): number {
+  const now = new Date();
+  return new Date(now.getTime() - (now.getHours() < 4 ? 24 * 60 * 60 * 1000 : 0)).getDay();
+}
+
 /** E2E テストで使う端末ID。視聴時間の記録のキーを決めるため、拡張機能が作る前に保存しておく */
 const DEVICE_ID = 'e2e-device';
 
@@ -62,6 +68,8 @@ type Fixtures = {
   extensionId: string;
   /** 予約枠を保存し、Service Worker の判定が反映されるまで待つ */
   setSchedule: (schedule: DayRule[], expectBlocking: boolean) => Promise<void>;
+  /** 予約枠の保存より後に判定を終え、ブロックの状態が期待どおりになるまで待つ */
+  waitForBlocking: (expectBlocking: boolean, since: number) => Promise<void>;
   /** この端末の今日（4時区切り）の視聴時間の記録を書き換える */
   setTodayUsage: (ms: number) => Promise<void>;
   /** この端末の視聴時間の記録の合計（ミリ秒） */
@@ -104,13 +112,8 @@ export const test = base.extend<Fixtures>({
     await use(new URL(serviceWorker.url()).host);
   },
 
-  setSchedule: async ({ serviceWorker }, use) => {
-    await use(async (schedule, expectBlocking) => {
-      const savedAt = await serviceWorker.evaluate(async (value) => {
-        await chrome.storage.sync.set({ schedule: value });
-        return Date.now();
-      }, schedule);
-      // 保存より後に判定を終えていて、ブロックの状態が期待どおりになるまで待つ。
+  waitForBlocking: async ({ serviceWorker }, use) => {
+    await use(async (expectBlocking, since) => {
       // 保存前に始まった判定（起動時の判定など）の結果を、反映済みと取り違えないため
       await expect
         .poll(() =>
@@ -118,9 +121,19 @@ export const test = base.extend<Fixtures>({
             const { lastEvaluatedAt } = await chrome.storage.session.get('lastEvaluatedAt');
             const rules = await chrome.declarativeNetRequest.getDynamicRules();
             return Number(lastEvaluatedAt ?? 0) >= since ? rules.length > 0 : 'not yet';
-          }, savedAt),
+          }, since),
         )
         .toBe(expectBlocking);
+    });
+  },
+
+  setSchedule: async ({ serviceWorker, waitForBlocking }, use) => {
+    await use(async (schedule, expectBlocking) => {
+      const savedAt = await serviceWorker.evaluate(async (value) => {
+        await chrome.storage.sync.set({ schedule: value });
+        return Date.now();
+      }, schedule);
+      await waitForBlocking(expectBlocking, savedAt);
     });
   },
 
