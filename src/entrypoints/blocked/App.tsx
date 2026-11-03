@@ -64,10 +64,14 @@ export function App() {
     );
   }
 
-  const { nextAllowedAt } = state.verdict;
+  const { reason, nextAllowedAt } = state.verdict;
   return (
     <main className={isEmbedded ? 'embedded' : undefined}>
-      <h1>今はYouTubeを見られない時間です</h1>
+      <h1>
+        {reason === 'budget-exhausted'
+          ? '今日の視聴時間を使い切りました'
+          : '今はYouTubeを見られない時間です'}
+      </h1>
       <p className="next">
         {nextAllowedAt === null
           ? '見られる時間が設定されていません'

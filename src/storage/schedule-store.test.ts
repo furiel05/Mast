@@ -49,4 +49,18 @@ describe('loadVerdict', () => {
     await browser.storage.sync.set({ schedule: ALWAYS });
     expect((await loadVerdict(new Date(2026, 10, 2, 12, 0))).allowed).toBe(true);
   });
+
+  it('全端末の今日の視聴時間で予算を判定する', async () => {
+    const budget = Array(7).fill({ type: 'budget', budgetMinutes: 60 });
+    await browser.storage.sync.set({
+      schedule: budget,
+      'usage_2026-11-02_a': 40 * 60 * 1000,
+      'usage_2026-11-02_b': 20 * 60 * 1000,
+    });
+    expect(await loadVerdict(new Date(2026, 10, 2, 12, 0))).toEqual({
+      allowed: false,
+      reason: 'budget-exhausted',
+      nextAllowedAt: new Date(2026, 10, 3, 4, 0),
+    });
+  });
 });

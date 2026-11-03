@@ -1,6 +1,7 @@
 import { browser } from 'wxt/browser';
 import { DEFAULT_SCHEDULE } from '../core/default-schedule';
 import { evaluate, parseSchedule, type Verdict, type WeeklySchedule } from '../core/schedule';
+import { loadUsedMs } from './usage-store';
 
 /** 予約枠を保存する storage.sync のキー */
 export const SCHEDULE_KEY = 'schedule';
@@ -11,8 +12,8 @@ export async function loadSchedule(): Promise<WeeklySchedule> {
   return parseSchedule(stored[SCHEDULE_KEY]) ?? DEFAULT_SCHEDULE;
 }
 
-/** 保存された予約枠で、今見てよいかを判定する */
+/** 保存された予約枠と今日の視聴時間で、今見てよいかを判定する */
 export async function loadVerdict(now: Date): Promise<Verdict> {
-  // 視聴時間はまだ数えていない（予算の計測はステップ3）ので 0 として判定する
-  return evaluate(await loadSchedule(), now, 0);
+  const [schedule, usedMs] = await Promise.all([loadSchedule(), loadUsedMs(now)]);
+  return evaluate(schedule, now, usedMs);
 }
