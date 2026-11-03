@@ -24,3 +24,24 @@ function isSameDate(a: Date, b: Date): boolean {
     a.getDate() === b.getDate()
   );
 }
+
+/**
+ * 4時区切りの日の0時からの分（day.ts 参照）を、設定画面に出す時刻にする。
+ * 0時以降は「翌2:00」のように書く（docs/spec.md「1日の区切り」）
+ */
+export function formatTimeOfDay(minute: number): string {
+  const nextDay = minute >= 24 * 60;
+  const m = nextDay ? minute - 24 * 60 : minute;
+  return `${nextDay ? '翌' : ''}${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+}
+
+/** 視聴時間を「1時間5分」「23分」のように書く。1分未満は切り捨てる */
+export function formatDuration(ms: number): string {
+  const totalMinutes = Math.floor(ms / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) {
+    return `${minutes}分`;
+  }
+  return minutes === 0 ? `${hours}時間` : `${hours}時間${minutes}分`;
+}

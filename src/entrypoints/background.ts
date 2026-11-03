@@ -34,6 +34,8 @@ export default defineBackground(() => {
     }
   });
 
+  browser.action.onClicked.addListener(() => void browser.runtime.openOptionsPage());
+
   // 予約枠が変わったら、すぐに判定し直す
   browser.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === 'sync' && SCHEDULE_KEY in changes) {

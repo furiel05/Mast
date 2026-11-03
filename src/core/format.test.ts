@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatNextAllowed } from './format';
+import { formatDuration, formatNextAllowed, formatTimeOfDay } from './format';
 
 // 2026-11-02 は月曜日
 describe('formatNextAllowed', () => {
@@ -27,5 +27,30 @@ describe('formatNextAllowed', () => {
     expect(formatNextAllowed(new Date(2026, 11, 1, 20, 0), new Date(2026, 10, 30, 23, 0))).toBe(
       '明日（火）20:00',
     );
+  });
+});
+
+describe('formatTimeOfDay', () => {
+  it.each([
+    [4 * 60, '4:00'],
+    [9 * 60 + 5, '9:05'],
+    [23 * 60 + 45, '23:45'],
+    [24 * 60, '翌0:00'],
+    [26 * 60 + 30, '翌2:30'],
+    [28 * 60, '翌4:00'],
+  ])('%i 分は %s', (minute, expected) => {
+    expect(formatTimeOfDay(minute)).toBe(expected);
+  });
+});
+
+describe('formatDuration', () => {
+  it.each([
+    [0, '0分'],
+    [59_999, '0分'],
+    [23 * 60_000, '23分'],
+    [60 * 60_000, '1時間'],
+    [65 * 60_000 + 30_000, '1時間5分'],
+  ])('%i ミリ秒は %s', (ms, expected) => {
+    expect(formatDuration(ms)).toBe(expected);
   });
 });
