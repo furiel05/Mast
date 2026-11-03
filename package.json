@@ -18,7 +18,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "wxt build && playwright test",
-    "check": "npm run typecheck && npm run lint && npm test"
+    "check": "npm run typecheck && npm run lint && npm test",
+    "icons": "node scripts/render-icons.ts",
+    "store-images": "wxt build && node scripts/store-images.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.4",

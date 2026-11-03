@@ -11,7 +11,13 @@ export default defineBackground(() => {
     await browser.alarms.create(SAFETY_ALARM, { periodInMinutes: 1 });
     await reevaluate(() => pruneUsage(new Date()));
   };
-  browser.runtime.onInstalled.addListener(() => void start());
+  browser.runtime.onInstalled.addListener((details) => {
+    void start();
+    // 初めて入れた人が、予約枠づくりと承認コードの設定から始められるようにする
+    if (details.reason === 'install') {
+      void browser.runtime.openOptionsPage();
+    }
+  });
   browser.runtime.onStartup.addListener(() => void start());
 
   browser.alarms.onAlarm.addListener((alarm) => {
