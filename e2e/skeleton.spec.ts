@@ -10,6 +10,11 @@ test('設定画面が開ける', async ({ page, extensionId }) => {
   await expect(page.getByRole('heading', { name: 'Mast 設定' })).toBeVisible();
 });
 
+test('インストールした直後に設定画面が開く', async ({ context, extensionId }) => {
+  const optionsUrl = `chrome-extension://${extensionId}/options.html`;
+  await expect.poll(() => context.pages().map((p) => p.url())).toContain(optionsUrl);
+});
+
 test('YouTube のページでコンテンツスクリプトが動く', async ({ page, setSchedule }) => {
   await setSchedule(ALLOW_ALL, false);
   await page.goto('https://www.youtube.com/watch?v=test');

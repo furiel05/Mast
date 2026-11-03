@@ -27,6 +27,8 @@ npm run check
 | `npm run lint` | lint とフォーマットのチェック（Biome） |
 | `npm run lint:fix` | lint とフォーマットを自動修正 |
 | `npm run check` | 型チェック・lint・ユニットテストをまとめて実行 |
+| `npm run icons` | `assets/icon.svg` から拡張機能のアイコン（`public/icon/`）を作り直す |
+| `npm run store-images` | Chrome Web Store に載せるスクリーンショットなどを `.output/store/` に作る |
 
 ## ビルドしたものを Chrome で試す
 
@@ -43,8 +45,11 @@ src/
   background/   Service Worker の処理（判定し直し、ブロックのオン・オフ、アラーム）
   entrypoints/  拡張機能の入口（Service Worker、コンテンツスクリプト、設定画面、ブロック画面）。画面は React で描く
   messages.ts   Service Worker とコンテンツスクリプトの間でやりとりする合図
+public/icon/    拡張機能のアイコン（`npm run icons` で作る）
+assets/         アイコンの元の画像
+scripts/        アイコンやストア用の画像を作るスクリプト
 e2e/            E2E テスト（Playwright）
-docs/           仕様書
+docs/           仕様書、プライバシーポリシー、Chrome Web Store の掲載情報
 ```
 
 ## テストの方針
@@ -59,3 +64,7 @@ docs/           仕様書
 
 PR と main への push で GitHub Actions が動く（[.github/workflows/ci.yml](.github/workflows/ci.yml)）。
 型チェック・lint・ユニットテスト・ビルド・E2E テストを実行し、拡張機能の zip を成果物として保存する。
+
+## 公開
+
+Chrome Web Store への公開の手順と、ストアに入力する内容は [docs/store-listing.md](docs/store-listing.md) にまとめている。

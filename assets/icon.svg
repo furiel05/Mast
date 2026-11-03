@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <title>Mast</title>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="#2563eb"/>
+  <rect x="61" y="22" width="7" height="68" rx="2" fill="#fff"/>
+  <path d="M56 28 V82 H24 Z" fill="#fff"/>
+  <path d="M73 38 V82 H100 Z" fill="#fff" opacity="0.8"/>
+  <path d="M22 90 H106 L94 106 H34 Z" fill="#fff"/>
+</svg>
