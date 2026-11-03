@@ -61,8 +61,10 @@ describe('describeRule', () => {
   it.each([
     [{ type: 'none' } as const, '見ない日'],
     [{ type: 'window', window } as const, '20:00〜翌2:00'],
-    [{ type: 'budget', budgetMinutes: 60 } as const, '60分まで'],
+    [{ type: 'window', window: { start: 4 * 60, end: 28 * 60 } } as const, 'いつでも'],
+    [{ type: 'budget', budgetMinutes: 60 } as const, 'いつでも（1日1時間まで）'],
     [{ type: 'combined', window, budgetMinutes: 45 } as const, '20:00〜翌2:00のうち45分まで'],
+    [{ type: 'combined', window, budgetMinutes: 90 } as const, '20:00〜翌2:00のうち1時間30分まで'],
   ])('%o は「%s」', (rule, text) => {
     expect(describeRule(rule)).toBe(text);
   });
