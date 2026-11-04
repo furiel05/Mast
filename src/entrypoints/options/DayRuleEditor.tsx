@@ -1,22 +1,19 @@
-import { type KeyboardEvent, type PointerEvent, useRef, useState } from 'react';
-import { DAY_END_MINUTE, DAY_START_MINUTE } from '../../core/day';
+import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import { formatDuration, formatTimeOfDay } from '../../core/format';
 import type { DayRule, TimeRange } from '../../core/schedule';
 import {
   ALL_DAY,
   type DayForm,
   DEFAULT_FORM,
+  formatHour,
+  hourOptions,
   isAllDay,
-  parseTimeOfDay,
+  joinTime,
+  minuteOptions,
+  summarize,
   toForm,
   toRule,
 } from './day-form';
-
-/** ドラッグと矢印キーで動かす単位（分） */
-const STEP_MINUTES = 15;
-/** PageUp・PageDown で動かす単位（分） */
-const PAGE_MINUTES = 60;
-const DAY_LENGTH = DAY_END_MINUTE - DAY_START_MINUTE;
 
 /**
  * 1日の上限のボタン（分）。null は上限なし。
@@ -26,8 +23,8 @@ const LIMIT_PRESETS: readonly (number | null)[] = [null, 30, 60, 120];
 /** 「その他」を選んだときに、まだ上限がなければ入れておく値 */
 const DEFAULT_OTHER_LIMIT = 90;
 
-/** 帯の上の目盛り（4時間ごと） */
-const AXIS_HOURS = [4, 8, 12, 16, 20, 24, 28];
+/** ホイールの1行の高さ（px）。style.css の .wheel と合わせる */
+const WHEEL_ITEM_HEIGHT = 32;
 
 type Props = {
   /** 「月曜日」など */
@@ -65,72 +62,31 @@ export function DayRuleEditor({ label, rule, onChange }: Props) {
       {form === null ? (
         <span className="off">見ない日</span>
       ) : (
-        <>
-          <div>
-            <Timeline label={label} range={form.range} onChange={(range) => update({ range })} />
-            <div className="range-text">
-              <TimeText
-                label={`${label}の開始`}
-                minute={form.range.start}
-                onCommit={(start) => update({ range: { ...form.range, start } })}
+        <div>
+          <div className="fields">
+            <div className="field">
+              <span className="field-label">見てよい時間帯</span>
+              <RangePicker
+                label={label}
+                range={form.range}
+                onChange={(range) => update({ range })}
               />
-              〜
-              <TimeText
-                label={`${label}の終了`}
-                minute={form.range.end}
-                onCommit={(end) => update({ range: { ...form.range, end } })}
-              />
-              {isAllDay(form.range) ? (
-                <span className="all-day">いつでも</span>
-              ) : (
-                <button type="button" className="link" onClick={() => update({ range: ALL_DAY })}>
-                  いつでもにする
-                </button>
-              )}
             </div>
+            <LimitPicker
+              label={label}
+              limitMinutes={form.limitMinutes}
+              onChange={(limitMinutes) => update({ limitMinutes })}
+            />
           </div>
-          <LimitPicker
-            label={label}
-            limitMinutes={form.limitMinutes}
-            rangeMinutes={form.range.end - form.range.start}
-            onChange={(limitMinutes) => update({ limitMinutes })}
-          />
-        </>
+          <p className="summary">→ {summarize(form)}</p>
+        </div>
       )}
     </fieldset>
   );
 }
 
-/** 曜日の行の上に置く、列の見出しと時刻の目盛り */
-export function DayGridHeader() {
-  return (
-    <div className="day-grid day-header" aria-hidden="true">
-      <span />
-      <span>見る</span>
-      <div className="axis">
-        {AXIS_HOURS.map((hour) => (
-          <span key={hour} style={{ left: `${percentOf(hour * 60)}%` }}>
-            {hour === 28 ? '翌4:00' : `${hour % 24}:00`}
-          </span>
-        ))}
-      </div>
-      <span>1日の上限</span>
-    </div>
-  );
-}
-
-function percentOf(minute: number): number {
-  return ((minute - DAY_START_MINUTE) / DAY_LENGTH) * 100;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
-type Handle = 'start' | 'end';
-
-/** 4:00〜翌4:00 の帯。両端をドラッグするか、矢印キーで時間帯を変える */
-function Timeline({
+/** 時間帯のボタン。押すと、開始と終了の時刻をホイールで選ぶ画面が開く */
+function RangePicker({
   label,
   range,
   onChange,
@@ -139,148 +95,248 @@ function Timeline({
   range: TimeRange;
   onChange: (range: TimeRange) => void;
 }) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [dragging, setDragging] = useState<Handle | null>(null);
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  // 「いつでも」をオフに戻したとき、オンにする前の時間帯に戻すため
+  const lastRange = useRef<TimeRange>(isAllDay(range) ? DEFAULT_FORM.range : range);
+  if (!isAllDay(range)) {
+    lastRange.current = range;
+  }
 
-  const move = (handle: Handle, minute: number) => {
-    // 始まりと終わりが入れ替わったり重なったりしないよう、15分以上あける
-    if (handle === 'start') {
-      onChange({ ...range, start: clamp(minute, DAY_START_MINUTE, range.end - STEP_MINUTES) });
-    } else {
-      onChange({ ...range, end: clamp(minute, range.start + STEP_MINUTES, DAY_END_MINUTE) });
+  const close = () => {
+    setOpen(false);
+    buttonRef.current?.focus();
+  };
+
+  // 外側を押すか Esc キーで閉じる
+  useEffect(() => {
+    if (!open) {
+      return;
     }
-  };
+    const onPointerDown = (e: PointerEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [open]);
 
-  const minuteAt = (clientX: number): number => {
-    const rect = trackRef.current?.getBoundingClientRect();
-    if (rect === undefined || rect.width === 0) {
-      return DAY_START_MINUTE;
-    }
-    const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
-    return DAY_START_MINUTE + Math.round((ratio * DAY_LENGTH) / STEP_MINUTES) * STEP_MINUTES;
-  };
-
-  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    const minute = minuteAt(e.clientX);
-    // つまみを押したらそのつまみ、帯を押したら近いほうのつまみを動かす
-    const handle =
-      ((e.target as HTMLElement).dataset.handle as Handle | undefined) ??
-      (Math.abs(minute - range.start) <= Math.abs(minute - range.end) ? 'start' : 'end');
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setDragging(handle);
-    move(handle, minute);
-  };
-
-  const onKeyDown = (handle: Handle) => (e: KeyboardEvent<HTMLDivElement>) => {
-    const current = range[handle];
-    const next = {
-      ArrowLeft: current - STEP_MINUTES,
-      ArrowDown: current - STEP_MINUTES,
-      ArrowRight: current + STEP_MINUTES,
-      ArrowUp: current + STEP_MINUTES,
-      PageDown: current - PAGE_MINUTES,
-      PageUp: current + PAGE_MINUTES,
-      Home: DAY_START_MINUTE,
-      End: DAY_END_MINUTE,
-    }[e.key];
-    if (next !== undefined) {
-      e.preventDefault();
-      move(handle, next);
-    }
-  };
-
-  const left = percentOf(range.start);
-  const width = percentOf(range.end) - left;
+  const text = isAllDay(range)
+    ? 'いつでも'
+    : `${formatTimeOfDay(range.start)} 〜 ${formatTimeOfDay(range.end)}`;
   return (
-    <div
-      ref={trackRef}
-      className={`track${dragging === null ? '' : ' dragging'}`}
-      onPointerDown={onPointerDown}
-      onPointerMove={(e) => dragging !== null && move(dragging, minuteAt(e.clientX))}
-      onPointerUp={() => setDragging(null)}
-      onPointerCancel={() => setDragging(null)}
-    >
-      <div className="fill" style={{ left: `${left}%`, width: `${width}%` }} />
-      {(['start', 'end'] as const).map((handle) => (
+    <div className="range-picker" ref={containerRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="select-button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={`${label}の時間帯（${text}）`}
+        onClick={() => setOpen(!open)}
+      >
+        {text}
+        <span className="chevron" aria-hidden="true">
+          ▾
+        </span>
+      </button>
+      {open && (
         <div
-          key={handle}
-          role="slider"
-          tabIndex={0}
-          className={`handle ${handle}`}
-          data-handle={handle}
-          style={{ left: `${percentOf(range[handle])}%` }}
-          aria-label={`${label}の${handle === 'start' ? '開始' : '終了'}`}
-          aria-valuemin={DAY_START_MINUTE}
-          aria-valuemax={DAY_END_MINUTE}
-          aria-valuenow={range[handle]}
-          aria-valuetext={formatTimeOfDay(range[handle])}
-          onKeyDown={onKeyDown(handle)}
-        />
-      ))}
+          className="popover"
+          role="dialog"
+          aria-label={`${label}の時間帯`}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              close();
+            }
+          }}
+        >
+          <label className="all-day">
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              aria-checked={isAllDay(range)}
+              checked={isAllDay(range)}
+              onChange={(e) => onChange(e.target.checked ? ALL_DAY : lastRange.current)}
+            />
+            いつでも（時間帯を決めない）
+          </label>
+          {!isAllDay(range) && (
+            <div className="wheels">
+              <TimeWheel
+                label={`${label}の開始`}
+                caption="開始"
+                edge="start"
+                minute={range.start}
+                onChange={(start) => onChange({ ...range, start })}
+              />
+              <span className="wheel-dash" aria-hidden="true">
+                〜
+              </span>
+              <TimeWheel
+                label={`${label}の終了`}
+                caption="終了"
+                edge="end"
+                minute={range.end}
+                onChange={(end) => onChange({ ...range, end })}
+              />
+            </div>
+          )}
+          {range.start >= range.end && (
+            <p className="field-error">終わりは始まりより後にしてください</p>
+          )}
+          <div className="popover-actions">
+            <button type="button" onClick={close}>
+              閉じる
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-/** 時刻の表示。クリックすると直接入力できる（分単位） */
-function TimeText({
+/** 1つの時刻を、時と分の2つのホイールで選ぶ */
+function TimeWheel({
   label,
+  caption,
+  edge,
   minute,
-  onCommit,
+  onChange,
 }: {
   label: string;
+  caption: string;
+  edge: 'start' | 'end';
   minute: number;
-  onCommit: (minute: number) => void;
+  onChange: (minute: number) => void;
 }) {
-  const [text, setText] = useState<string | null>(null);
-  const [invalid, setInvalid] = useState(false);
+  const hour = Math.floor(minute / 60);
+  const minuteOfHour = minute % 60;
+  return (
+    <div className="time-wheel">
+      <span className="wheel-caption">{caption}</span>
+      <div className="wheel-pair">
+        <WheelColumn
+          label={`${label}（時）`}
+          options={hourOptions(edge).map((h) => ({ value: h, text: formatHour(h) }))}
+          value={hour}
+          onChange={(h) => onChange(joinTime(h, minuteOfHour))}
+        />
+        <span className="wheel-colon" aria-hidden="true">
+          :
+        </span>
+        <WheelColumn
+          label={`${label}（分）`}
+          options={minuteOptions(minute).map((m) => ({
+            value: m,
+            text: String(m).padStart(2, '0'),
+          }))}
+          value={minuteOfHour}
+          onChange={(m) => onChange(joinTime(hour, m))}
+        />
+      </div>
+    </div>
+  );
+}
 
-  if (text === null) {
-    return (
-      <button
-        type="button"
-        className="time"
-        aria-label={`${label}を入力（${formatTimeOfDay(minute)}）`}
-        onClick={() => setText(formatTimeOfDay(minute))}
-      >
-        {formatTimeOfDay(minute)}
-      </button>
-    );
-  }
-  const commit = () => {
-    const parsed = parseTimeOfDay(text);
-    if (parsed === null) {
-      setInvalid(true);
+/**
+ * スクロールして選ぶ列。真ん中に来た値を選ぶ。項目のクリックや、上下キーでも選べる。
+ * スクロールの途中では選び直さず、止まったとき（scrollend）に選ぶ。途中で選ぶと、
+ * 値に合わせてスクロール位置を直す処理と、慣性のスクロールがぶつかるため
+ */
+function WheelColumn({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: { value: number; text: string }[];
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const id = useId();
+  const index = Math.max(
+    0,
+    options.findIndex((option) => option.value === value),
+  );
+  const [centered, setCentered] = useState(index);
+  const indexAt = (scrollTop: number) =>
+    Math.min(Math.max(Math.round(scrollTop / WHEEL_ITEM_HEIGHT), 0), options.length - 1);
+
+  // 値が変わったら、その値が真ん中に来るようにスクロールする
+  useEffect(() => {
+    const el = ref.current;
+    const top = index * WHEEL_ITEM_HEIGHT;
+    if (el !== null && Math.abs(el.scrollTop - top) > 1) {
+      el.scrollTop = top;
+    }
+    setCentered(index);
+  }, [index]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (el === null) {
       return;
     }
-    onCommit(parsed);
-    setText(null);
-    setInvalid(false);
+    const onScrollEnd = () => {
+      const option = options[indexAt(el.scrollTop)];
+      if (option !== undefined && option.value !== value) {
+        onChange(option.value);
+      }
+    };
+    el.addEventListener('scrollend', onScrollEnd);
+    return () => el.removeEventListener('scrollend', onScrollEnd);
+  });
+
+  const select = (i: number) => {
+    const option = options[Math.min(Math.max(i, 0), options.length - 1)];
+    if (option !== undefined && option.value !== value) {
+      onChange(option.value);
+    }
   };
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const next = { ArrowUp: index - 1, ArrowDown: index + 1, Home: 0, End: options.length - 1 }[
+      e.key
+    ];
+    if (next !== undefined) {
+      e.preventDefault();
+      select(next);
+    }
+  };
+
   return (
-    <span className="time-edit">
-      <input
-        aria-label={`${label}時刻`}
-        aria-invalid={invalid}
-        value={text}
-        // biome-ignore lint/a11y/noAutofocus: クリックして入力欄に切り替えたので、そのまま打ち込めるようにする
-        autoFocus
-        onChange={(e) => {
-          setText(e.target.value);
-          setInvalid(false);
-        }}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            commit();
-          } else if (e.key === 'Escape') {
-            setText(null);
-            setInvalid(false);
-          }
-        }}
-      />
-      {invalid && <span className="field-error">20:00 や 翌1:30 のように入力してください</span>}
-    </span>
+    <div
+      ref={ref}
+      className="wheel"
+      role="listbox"
+      tabIndex={0}
+      aria-label={label}
+      aria-activedescendant={`${id}-${index}`}
+      onKeyDown={onKeyDown}
+      onScroll={(e) => setCentered(indexAt(e.currentTarget.scrollTop))}
+    >
+      {options.map((option, i) => (
+        // biome-ignore lint/a11y/useKeyWithClickEvents: キーボードでは、列（listbox）の上下キーで選ぶ
+        <div
+          key={option.value}
+          id={`${id}-${i}`}
+          role="option"
+          // 列（listbox）がフォーカスを持ち、aria-activedescendant で選ばれている項目を伝える
+          tabIndex={-1}
+          aria-selected={i === index}
+          className={i === centered ? 'centered' : undefined}
+          onClick={() => select(i)}
+        >
+          {option.text}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -288,22 +344,20 @@ function TimeText({
 function LimitPicker({
   label,
   limitMinutes,
-  rangeMinutes,
   onChange,
 }: {
   label: string;
   limitMinutes: number | null;
-  rangeMinutes: number;
   onChange: (limitMinutes: number | null) => void;
 }) {
   const [otherChosen, setOtherChosen] = useState(false);
   const isOther = otherChosen || !LIMIT_PRESETS.includes(limitMinutes);
   return (
-    <div className="limit">
-      <fieldset className="chips">
-        <legend className="sr-only">{label}の1日の上限</legend>
+    <fieldset className="field limit">
+      <legend className="field-label">1日に見てよい時間（上限）</legend>
+      <div className="segments">
         {LIMIT_PRESETS.map((preset) => (
-          <label key={preset ?? 'none'} className="chip">
+          <label key={preset ?? 'none'} className="segment">
             <input
               type="radio"
               name={`${label}-limit`}
@@ -313,10 +367,10 @@ function LimitPicker({
                 onChange(preset);
               }}
             />
-            {preset === null ? 'なし' : formatDuration(preset * 60 * 1000)}
+            {preset === null ? '上限なし' : formatDuration(preset * 60 * 1000)}
           </label>
         ))}
-        <label className="chip">
+        <label className="segment">
           <input
             type="radio"
             name={`${label}-limit`}
@@ -328,7 +382,7 @@ function LimitPicker({
           />
           その他
         </label>
-      </fieldset>
+      </div>
       {isOther && (
         <span className="other">
           <input
@@ -343,9 +397,6 @@ function LimitPicker({
           分まで
         </span>
       )}
-      {limitMinutes !== null && limitMinutes >= rangeMinutes && (
-        <p className="hint">時間帯より長いので、上限なしと同じです</p>
-      )}
-    </div>
+    </fieldset>
   );
 }

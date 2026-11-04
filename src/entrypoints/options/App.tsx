@@ -20,7 +20,7 @@ import {
 } from '../../storage/schedule-store';
 import { isTotpRegistered, TOTP_SECRET_KEY } from '../../storage/totp-store';
 import { loadUsedMs } from '../../storage/usage-store';
-import { DayGridHeader, DayRuleEditor } from './DayRuleEditor';
+import { DayRuleEditor } from './DayRuleEditor';
 import { TotpSetup } from './TotpSetup';
 
 /** 月曜始まりで並べる（docs/spec.md「設定画面」）。保存する形は日曜始まり */
@@ -148,9 +148,8 @@ export function App() {
       <section aria-labelledby="schedule-heading">
         <h2 id="schedule-heading">予約枠</h2>
         <p className="hint">
-          1日の区切りは朝4時です。帯の両端をドラッグするか、時刻をクリックして入力します。
+          1日の区切りは朝4時です。0時を過ぎた時刻は「翌1:00」のように選びます。
         </p>
-        <DayGridHeader />
         {DISPLAY_ORDER.map((weekday) => (
           <DayRuleEditor
             key={weekday}

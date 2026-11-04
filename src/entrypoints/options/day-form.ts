@@ -1,4 +1,5 @@
 import { DAY_END_MINUTE, DAY_START_MINUTE } from '../../core/day';
+import { formatDuration, formatTimeOfDay } from '../../core/format';
 import type { DayRule, TimeRange } from '../../core/schedule';
 
 /**
@@ -53,27 +54,59 @@ export function toRule(form: DayForm | null): DayRule {
     : { type: 'combined', window: range, budgetMinutes: limitMinutes };
 }
 
+/** ホイールで選ぶ分。15分刻み（docs/spec.md「設定画面」） */
+export const WHEEL_MINUTES: readonly number[] = [0, 15, 30, 45];
+
 /**
- * 直接入力された時刻を、4時区切りの日の0時からの分（day.ts 参照）にする。読めなければ null。
- * 「20:00」「20」「2030」「翌1:00」「25:00」を受け付け、4:00より前の時刻は翌日として扱う
+ * 時のホイールに並べる時。4時区切りの日の0時から数えるので、24以上は翌日（翌0〜）。
+ * 始まりは翌3時台まで、終わりは翌4:00まで選べる
  */
-export function parseTimeOfDay(text: string): number | null {
-  const normalized = text
-    .replace(/[０-９：]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
-    .replace(/\s/g, '');
-  const match = /^(翌)?(\d{1,2})(?::?(\d{2}))?$/.exec(normalized);
-  if (match === null) {
-    return null;
+export function hourOptions(edge: 'start' | 'end'): number[] {
+  const last = edge === 'start' ? DAY_END_MINUTE / 60 - 1 : DAY_END_MINUTE / 60;
+  return Array.from(
+    { length: last - DAY_START_MINUTE / 60 + 1 },
+    (_, i) => DAY_START_MINUTE / 60 + i,
+  );
+}
+
+/** 分のホイールに並べる分。15分刻みでない時刻が保存されていても表示できるよう、その分を足す */
+export function minuteOptions(minute: number): number[] {
+  const current = minute % 60;
+  return WHEEL_MINUTES.includes(current)
+    ? [...WHEEL_MINUTES]
+    : [...WHEEL_MINUTES, current].sort((a, b) => a - b);
+}
+
+/** 時と分を合わせる。翌4時台は翌4:00にそろえる（1日の終わりより後にはしない） */
+export function joinTime(hour: number, minute: number): number {
+  return Math.min(hour * 60 + minute, DAY_END_MINUTE);
+}
+
+/** 時のホイールの表示。「20」「翌1」 */
+export function formatHour(hour: number): string {
+  return hour >= 24 ? `翌${hour - 24}` : String(hour);
+}
+
+/**
+ * 1日分の設定の意味を文章にする。各曜日の下に出す（docs/spec.md「設定画面」）。
+ * 上限が時間帯の長さ以上なら、上限なしと同じ意味になることも書く
+ */
+export function summarize(form: DayForm): string {
+  const { range, limitMinutes } = form;
+  const when = isAllDay(range)
+    ? 'いつでも'
+    : `${formatTimeOfDay(range.start)}〜${formatTimeOfDay(range.end)}`;
+  if (limitMinutes === null) {
+    return isAllDay(range) ? '1日中いつでも見られます' : `${when} の間なら、いつでも見られます`;
   }
-  const [, nextDay, h, m] = match;
-  const hours = Number(h);
-  const minutes = Number(m ?? 0);
-  if (minutes >= 60) {
-    return null;
+  if (!Number.isFinite(limitMinutes)) {
+    return '';
   }
-  let minute = hours * 60 + minutes;
-  if (nextDay !== undefined || minute < DAY_START_MINUTE) {
-    minute += 24 * 60;
+  if (limitMinutes >= range.end - range.start) {
+    return `${when} の間なら、いつでも見られます（上限は時間帯より長いので、上限なしと同じです）`;
   }
-  return minute >= DAY_START_MINUTE && minute <= DAY_END_MINUTE ? minute : null;
+  const limit = formatDuration(limitMinutes * 60 * 1000);
+  return isAllDay(range)
+    ? `いつでも、合計${limit}まで見られます`
+    : `${when} のうち、合計${limit}まで見られます`;
 }

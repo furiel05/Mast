@@ -8,6 +8,7 @@ import {
   test,
   totpCode,
 } from './fixtures';
+import { setAllDay } from './schedule-editor';
 
 // Service Worker の中で動かすコードから使う
 declare const chrome: typeof browser;
@@ -52,12 +53,9 @@ test('設定後は、広げる変更を認証アプリのコードで申請し�
   await setSchedule(BLOCK_ALL, true);
   await page.goto(`chrome-extension://${extensionId}/options.html`);
 
-  const label = WEEKDAY_LABELS[logicalWeekday()];
+  const label = WEEKDAY_LABELS[logicalWeekday()] ?? '';
   await page.getByRole('switch', { name: `${label}に見る` }).click();
-  await page
-    .getByRole('group', { name: label })
-    .getByRole('button', { name: 'いつでもにする' })
-    .click();
+  await setAllDay(page, label);
   await expect(page.getByText('申請すると、24時間後に反映されます')).toBeVisible();
 
   await page.getByLabel('認証アプリのコード').fill('000000');

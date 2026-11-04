@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { DayRule } from '../../core/schedule';
-import { ALL_DAY, parseTimeOfDay, toForm, toRule } from './day-form';
+import {
+  ALL_DAY,
+  formatHour,
+  hourOptions,
+  joinTime,
+  minuteOptions,
+  summarize,
+  toForm,
+  toRule,
+} from './day-form';
 
 const evening = { start: 20 * 60, end: 23 * 60 };
 
@@ -42,31 +51,70 @@ describe('toForm', () => {
   });
 });
 
-describe('parseTimeOfDay', () => {
-  it.each([
-    ['20:00', 20 * 60],
-    ['20:30', 20 * 60 + 30],
-    ['20', 20 * 60],
-    ['2030', 20 * 60 + 30],
-    ['9:05', 9 * 60 + 5],
-    ['４:００', 4 * 60],
-    [' 21 : 15 ', 21 * 60 + 15],
-  ])('「%s」は当日の時刻', (text, minute) => {
-    expect(parseTimeOfDay(text)).toBe(minute);
+describe('hourOptions', () => {
+  it('始まりは4時から翌3時まで', () => {
+    const hours = hourOptions('start');
+    expect([hours[0], hours.at(-1), hours.length]).toEqual([4, 27, 24]);
   });
 
-  it.each([
-    ['翌1:00', 25 * 60],
-    ['1:00', 25 * 60],
-    ['0:00', 24 * 60],
-    ['25:00', 25 * 60],
-    ['3:59', 27 * 60 + 59],
-    ['翌4:00', 28 * 60],
-  ])('「%s」は翌日の時刻（4時区切り）', (text, minute) => {
-    expect(parseTimeOfDay(text)).toBe(minute);
+  it('終わりは翌4時まで', () => {
+    expect(hourOptions('end').at(-1)).toBe(28);
+  });
+});
+
+describe('minuteOptions', () => {
+  it('15分刻み', () => {
+    expect(minuteOptions(20 * 60 + 30)).toEqual([0, 15, 30, 45]);
   });
 
-  it.each(['', 'abc', '20:60', '翌5:00', '29:00', '20:5', '123456'])('「%s」は読めない', (text) => {
-    expect(parseTimeOfDay(text)).toBeNull();
+  it('15分刻みでない時刻が保存されていれば、その分も並べる', () => {
+    expect(minuteOptions(21 * 60 + 10)).toEqual([0, 10, 15, 30, 45]);
+  });
+});
+
+describe('joinTime', () => {
+  it('時と分を合わせる。翌日の時刻は24時以降になる', () => {
+    expect(joinTime(20, 15)).toBe(20 * 60 + 15);
+    expect(joinTime(25, 30)).toBe(25 * 60 + 30);
+  });
+
+  it('翌4時台は翌4:00にそろえる', () => {
+    expect(joinTime(28, 45)).toBe(28 * 60);
+  });
+});
+
+describe('formatHour', () => {
+  it.each([
+    [4, '4'],
+    [23, '23'],
+    [24, '翌0'],
+    [28, '翌4'],
+  ])('%i は「%s」', (hour, text) => {
+    expect(formatHour(hour)).toBe(text);
+  });
+});
+
+describe('summarize', () => {
+  it.each<[string, Parameters<typeof summarize>[0], string]>([
+    [
+      '時間帯だけ',
+      { range: evening, limitMinutes: null },
+      '20:00〜23:00 の間なら、いつでも見られます',
+    ],
+    ['いつでも・上限なし', { range: ALL_DAY, limitMinutes: null }, '1日中いつでも見られます'],
+    ['いつでも＋上限', { range: ALL_DAY, limitMinutes: 120 }, 'いつでも、合計2時間まで見られます'],
+    [
+      '時間帯＋上限',
+      { range: evening, limitMinutes: 90 },
+      '20:00〜23:00 のうち、合計1時間30分まで見られます',
+    ],
+    [
+      '上限が時間帯より長い',
+      { range: evening, limitMinutes: 180 },
+      '20:00〜23:00 の間なら、いつでも見られます（上限は時間帯より長いので、上限なしと同じです）',
+    ],
+    ['上限が入力されていない', { range: evening, limitMinutes: Number.NaN }, ''],
+  ])('%s', (_, form, text) => {
+    expect(summarize(form)).toBe(text);
   });
 });
