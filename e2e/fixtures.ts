@@ -128,6 +128,10 @@ export const test = base.extend<Fixtures>({
   serviceWorker: async ({ context }, use) => {
     const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
     await worker.evaluate((id) => chrome.storage.local.set({ deviceId: id }), DEVICE_ID);
+    // インストールした直後に、拡張機能が設定画面を開く（background.ts）。テストが同じ設定画面へ
+    // 移動するのとぶつかって移動が中断されないよう、開き終わるのを待ってからテストを始める
+    const optionsUrl = new URL('/options.html', worker.url()).href;
+    await expect.poll(() => context.pages().some((page) => page.url() === optionsUrl)).toBe(true);
     await use(worker);
   },
 
