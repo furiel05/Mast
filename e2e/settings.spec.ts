@@ -165,7 +165,7 @@ test('見るをオフにしてからオンに戻すと、元の時間帯と上�
 
   const toggle = page.getByRole('switch', { name: '月曜日に見る' });
   await toggle.click();
-  await expect(dayRow(page, '月曜日')).toContainText('見ない日');
+  await expect(dayRow(page, '月曜日')).toContainText('1日中見られません');
   await toggle.click();
 
   await expect(rangeButton(page, '月曜日')).toHaveText(/^20:00 〜 23:00/);

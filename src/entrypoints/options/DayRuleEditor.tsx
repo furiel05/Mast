@@ -43,43 +43,44 @@ export function DayRuleEditor({ label, rule, onChange }: Props) {
   }
   const update = (next: Partial<DayForm>) => onChange(toRule({ ...lastForm.current, ...next }));
 
+  const id = useId();
   return (
-    <fieldset className="day day-grid">
+    // 1行目に名前と見出し、2行目にスイッチと入力、3行目に説明の文章を並べる（style.css の .day）
+    <fieldset className="day">
       {/* 枠の上に置かれる legend は grid に並ばないので、読み上げ用にして、見える名前は別に書く */}
       <legend className="sr-only">{label}</legend>
       <span className="day-name" aria-hidden="true">
         {label}
       </span>
-      <input
-        type="checkbox"
-        role="switch"
-        className="switch"
-        aria-label={`${label}に見る`}
-        aria-checked={form !== null}
-        checked={form !== null}
-        onChange={(e) => onChange(toRule(e.target.checked ? lastForm.current : null))}
-      />
+      <label className="day-switch">
+        <input
+          type="checkbox"
+          role="switch"
+          className="switch"
+          aria-label={`${label}に見る`}
+          aria-checked={form !== null}
+          checked={form !== null}
+          onChange={(e) => onChange(toRule(e.target.checked ? lastForm.current : null))}
+        />
+        <span aria-hidden="true">{form === null ? '見ない' : '見る'}</span>
+      </label>
       {form === null ? (
-        <span className="off">見ない日</span>
+        <p className="day-off">1日中見られません</p>
       ) : (
-        <div>
-          <div className="fields">
-            <div className="field">
-              <span className="field-label">見てよい時間帯</span>
-              <RangePicker
-                label={label}
-                range={form.range}
-                onChange={(range) => update({ range })}
-              />
-            </div>
-            <LimitPicker
-              label={label}
-              limitMinutes={form.limitMinutes}
-              onChange={(limitMinutes) => update({ limitMinutes })}
-            />
-          </div>
+        <>
+          <span className="field-label range-label">見てよい時間帯</span>
+          <RangePicker label={label} range={form.range} onChange={(range) => update({ range })} />
+          <span className="field-label limit-label" id={`${id}-limit`}>
+            1日に見てよい時間（上限）
+          </span>
+          <LimitPicker
+            label={label}
+            labelledBy={`${id}-limit`}
+            limitMinutes={form.limitMinutes}
+            onChange={(limitMinutes) => update({ limitMinutes })}
+          />
           <p className="summary">→ {summarize(form)}</p>
-        </div>
+        </>
       )}
     </fieldset>
   );
@@ -340,63 +341,68 @@ function WheelColumn({
   );
 }
 
-/** 1日の上限。よく使う値はボタンで、それ以外は「その他」で分を入力する */
+/**
+ * 1日の上限。よく使う値はボタンで、それ以外は「その他」で分を入力する。
+ * 「その他」を選ぶと、そのボタンの中に入力欄が出る（行の高さを変えないため）
+ */
 function LimitPicker({
   label,
+  labelledBy,
   limitMinutes,
   onChange,
 }: {
   label: string;
+  /** 見出しの要素の id */
+  labelledBy: string;
   limitMinutes: number | null;
   onChange: (limitMinutes: number | null) => void;
 }) {
   const [otherChosen, setOtherChosen] = useState(false);
   const isOther = otherChosen || !LIMIT_PRESETS.includes(limitMinutes);
   return (
-    <fieldset className="field limit">
-      <legend className="field-label">1日に見てよい時間（上限）</legend>
-      <div className="segments">
-        {LIMIT_PRESETS.map((preset) => (
-          <label key={preset ?? 'none'} className="segment">
-            <input
-              type="radio"
-              name={`${label}-limit`}
-              checked={!isOther && limitMinutes === preset}
-              onChange={() => {
-                setOtherChosen(false);
-                onChange(preset);
-              }}
-            />
-            {preset === null ? '上限なし' : formatDuration(preset * 60 * 1000)}
-          </label>
-        ))}
-        <label className="segment">
+    // 見出しを曜日の名前と同じ行にそろえるため、legend を持つ fieldset ではなく、見出しを別の要素にする
+    <div className="segments" role="radiogroup" aria-labelledby={labelledBy}>
+      {LIMIT_PRESETS.map((preset) => (
+        <label key={preset ?? 'none'} className="segment">
           <input
             type="radio"
             name={`${label}-limit`}
-            checked={isOther}
+            checked={!isOther && limitMinutes === preset}
             onChange={() => {
-              setOtherChosen(true);
-              onChange(limitMinutes ?? DEFAULT_OTHER_LIMIT);
+              setOtherChosen(false);
+              onChange(preset);
             }}
           />
-          その他
+          {preset === null ? '上限なし' : formatDuration(preset * 60 * 1000)}
         </label>
-      </div>
-      {isOther && (
-        <span className="other">
-          <input
-            type="number"
-            aria-label={`${label}の1日の上限（分）`}
-            min={1}
-            max={24 * 60}
-            step={5}
-            value={limitMinutes === null || Number.isNaN(limitMinutes) ? '' : limitMinutes}
-            onChange={(e) => onChange(e.target.valueAsNumber)}
-          />
-          分まで
-        </span>
-      )}
-    </fieldset>
+      ))}
+      <label className="segment">
+        <input
+          type="radio"
+          name={`${label}-limit`}
+          checked={isOther}
+          onChange={() => {
+            setOtherChosen(true);
+            onChange(limitMinutes ?? DEFAULT_OTHER_LIMIT);
+          }}
+        />
+        {isOther ? (
+          <span className="other">
+            <input
+              type="number"
+              aria-label={`${label}の1日の上限（分）`}
+              min={1}
+              max={24 * 60}
+              step={5}
+              value={limitMinutes === null || Number.isNaN(limitMinutes) ? '' : limitMinutes}
+              onChange={(e) => onChange(e.target.valueAsNumber)}
+            />
+            分
+          </span>
+        ) : (
+          'その他'
+        )}
+      </label>
+    </div>
   );
 }

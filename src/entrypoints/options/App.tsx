@@ -150,14 +150,16 @@ export function App() {
         <p className="hint">
           1日の区切りは朝4時です。0時を過ぎた時刻は「翌1:00」のように選びます。
         </p>
-        {DISPLAY_ORDER.map((weekday) => (
-          <DayRuleEditor
-            key={weekday}
-            label={WEEKDAY_LABELS[weekday] ?? ''}
-            rule={draft[weekday]}
-            onChange={(rule) => updateDay(weekday, rule)}
-          />
-        ))}
+        <div className="days">
+          {DISPLAY_ORDER.map((weekday) => (
+            <DayRuleEditor
+              key={weekday}
+              label={WEEKDAY_LABELS[weekday] ?? ''}
+              rule={draft[weekday]}
+              onChange={(rule) => updateDay(weekday, rule)}
+            />
+          ))}
+        </div>
 
         {errors.length > 0 && (
           <ul className="errors" role="alert">

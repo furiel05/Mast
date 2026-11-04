@@ -40,35 +40,131 @@ p {
   margin: 0.5rem 0 1rem;
 }
 
+/* フォームの部品の共通の見た目。個別の部品の指定より前に置き、後ろで上書きできるようにする */
+select,
+input,
+button {
+  font: inherit;
+}
+
+select,
+input {
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 0.375rem;
+  background: Field;
+  color: FieldText;
+}
+
+input[type="number"] {
+  width: 5rem;
+}
+
+button {
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 0.8125rem;
+}
+
 .status .verdict {
   font-weight: 600;
   font-size: 1.0625rem;
 }
 
-.day-grid {
-  display: grid;
-  grid-template-columns: 4.5rem 2.75rem minmax(0, 1fr);
-  gap: 0.75rem;
-  align-items: start;
+/* 1週間ぶんの曜日を1枚の枠に並べる */
+.days {
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
 }
 
+/*
+ * 曜日の行。どの曜日も同じ線にそろうよう、列の幅を固定した grid にする。
+ *   1行目：曜日の名前・時間帯の見出し・上限の見出し
+ *   2行目：見るのスイッチ・時間帯のボタン・上限のボタン
+ *   3行目：設定の意味の文章
+ */
 .day {
+  display: grid;
+  grid-template-columns: 6rem 11rem minmax(0, 1fr);
+  grid-template-areas:
+    "name range-label limit-label"
+    "switch range limit"
+    ". summary summary";
+  column-gap: 1.5rem;
+  row-gap: 0.375rem;
+  align-items: center;
   position: relative;
   min-width: 0;
   margin: 0;
-  padding: 1rem 0;
+  padding: 1rem 1.25rem;
   border: none;
-  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+}
+
+.day:first-child {
+  border-top: none;
 }
 
 .day-name {
+  grid-area: name;
   font-weight: 600;
-  line-height: 1.5rem;
 }
 
-.off {
-  line-height: 1.5rem;
+.day-switch {
+  grid-area: switch;
+  display: flex;
+  white-space: nowrap;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  font-size: 0.875rem;
   color: var(--muted);
+  cursor: pointer;
+}
+
+.day-off {
+  grid-column: range / limit;
+  grid-row: switch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.range-label {
+  grid-area: range-label;
+}
+
+.limit-label {
+  grid-area: limit-label;
+}
+
+.range-picker {
+  grid-area: range;
+}
+
+.summary {
+  grid-area: summary;
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
 }
 
 .sr-only {
@@ -120,51 +216,30 @@ p {
   outline-offset: 2px;
 }
 
-/* 時間帯と1日の上限。曜日ごとにラベルを付ける */
-.fields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 2rem;
-  align-items: flex-start;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  margin: 0;
-  padding: 0;
-  border: none;
-  min-width: 0;
-}
-
 .field-label {
-  padding: 0;
   font-size: 0.8125rem;
   color: var(--muted);
 }
 
-.summary {
-  margin: 0.625rem 0 0;
-  font-size: 0.875rem;
-}
-
+/* 時間帯のボタンと上限のボタンは、同じ高さ・同じ枠線にそろえる */
 .range-picker {
   position: relative;
-  /* 「いつでも」でも「21:00 〜 翌2:00」でも、隣の1日の上限の位置がそろうようにする */
-  min-width: 10.5rem;
 }
 
 .select-button {
   display: inline-flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.375rem 0.75rem;
+  box-sizing: border-box;
+  width: 100%;
+  height: 2.25rem;
+  padding: 0 0.75rem;
   border: 1px solid var(--line-strong);
   border-radius: 0.5rem;
   background: Field;
   color: FieldText;
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -298,14 +373,20 @@ p {
 
 /* 1日の上限。つながったボタンから1つ選ぶ */
 .segments {
+  grid-area: limit;
   display: inline-flex;
+  justify-self: start;
+  box-sizing: border-box;
+  height: 2.25rem;
   border: 1px solid var(--line-strong);
   border-radius: 0.5rem;
   overflow: hidden;
 }
 
 .segment {
-  padding: 0.375rem 0.75rem;
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
   border-left: 1px solid var(--line);
   font-size: 0.9375rem;
   white-space: nowrap;
@@ -316,51 +397,37 @@ p {
   border-left: none;
 }
 
-.segment input {
+.segment input[type="radio"] {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
 
-.segment:has(input:checked) {
+.segment:has(input[type="radio"]:checked) {
   background: color-mix(in srgb, var(--accent) 15%, Canvas);
   color: var(--accent);
   font-weight: 600;
 }
 
-.segment:has(input:focus-visible) {
+.segment:has(input[type="radio"]:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
+/* 「その他」のボタンの中に出す入力欄 */
 .other {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.25rem;
 }
 
-.field-error {
-  color: #dc2626;
-  font-size: 0.8125rem;
-}
-
-select,
-input,
-button {
-  font: inherit;
-}
-
-select,
-input {
-  padding: 0.3rem 0.4rem;
-  border: 1px solid var(--line);
-  border-radius: 0.375rem;
-  background: Field;
-  color: FieldText;
-}
-
-input[type="number"] {
-  width: 5rem;
+.other input[type="number"] {
+  box-sizing: border-box;
+  width: 3.75rem;
+  height: 1.625rem;
+  padding: 0 0.25rem;
+  font-weight: 400;
+  text-align: right;
 }
 
 .errors {
@@ -382,26 +449,6 @@ input[type="number"] {
   align-items: center;
   gap: 0.75rem;
   margin: 1rem 0 2.5rem;
-}
-
-button {
-  padding: 0.5rem 1.25rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
-
-button.primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: white;
-}
-
-button:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 .card {

@@ -9,7 +9,7 @@ export function dayRow(page: Page, label: string): Locator {
 
 /** 曜日の行の「1日に見てよい時間（上限）」のボタン */
 export function limitOf(page: Page, label: string): Locator {
-  return dayRow(page, label).getByRole('group', { name: '1日に見てよい時間（上限）' });
+  return dayRow(page, label).getByRole('radiogroup', { name: '1日に見てよい時間（上限）' });
 }
 
 /** 時間帯のボタン。「月曜日の時間帯（20:00 〜 23:00）」のように、今の時間帯を名前に含む */
