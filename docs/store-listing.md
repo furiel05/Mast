@@ -15,7 +15,7 @@ Chrome Web Store のデベロッパー ダッシュボードに入力する内�
 | アイコン | `public/icon/128.png`（zip に含まれる） |
 | スクリーンショット（1280×800） | `.output/store/screenshot-settings.png`、`.output/store/screenshot-blocked.png` |
 | プロモーション タイル（小、440×280） | `.output/store/promo-small.png` |
-| プライバシー ポリシーの URL | <https://github.com/furiel05/Mast/blob/main/docs/privacy.md> |
+| プライバシー ポリシーの URL | <https://furiel05.github.io/Mast/privacy/>（`docs/privacy.md` を GitHub Pages で公開したもの） |
 | サポート URL | <https://github.com/furiel05/Mast/issues> |
 
 ## 説明文
@@ -24,7 +24,8 @@ Chrome Web Store のデベロッパー ダッシュボードに入力する内�
 YouTube を見てよい時間を、あらかじめ決めた「予約枠」の中だけにする拡張機能です。
 
 ■ できること
-・曜日ごとに「見ない日」「時間帯（例：20:00〜23:00）」「1日の合計時間（例：60分まで）」「時間帯＋合計時間」から選べます
+・曜日ごとに、見てよい時間帯（例：20:00〜23:00）と、1日に見てよい時間の上限（例：1時間まで）を決められます。どちらか片方だけでも、見ない日にすることもできます
+・時刻はホイールを回して選びます。設定の意味は「20:00〜23:00 のうち、合計1時間まで見られます」のように文章でも表示されます
 ・予約枠の外で YouTube を開くと、ブロック画面と次に見られる時刻を表示します。見ている途中で枠が終わったときも切り替わります
 ・他のサイトに埋め込まれた YouTube も対象です。YouTube Music は対象外です
 ・1日の区切りは朝4時。夜ふかしした深夜も「その日の夜」として扱います

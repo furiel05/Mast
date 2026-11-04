@@ -1,3 +1,9 @@
+---
+# GitHub Pages では https://furiel05.github.io/Mast/privacy/ で公開する（docs/_config.yml）
+title: Mast プライバシーポリシー
+permalink: /privacy/
+---
+
 # Mast プライバシーポリシー
 
 最終更新：2026年11月3日

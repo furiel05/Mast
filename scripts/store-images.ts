@@ -31,9 +31,14 @@ await context.route(/^https?:\/\//, (route) => route.abort());
 
 const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
 const extensionId = new URL(worker.url()).host;
-await worker.evaluate(async (schedule) => {
-  await chrome.storage.sync.set({ schedule });
-}, SCHEDULE);
+// 承認コードの設定を済ませた状態にして、設定画面のスクリーンショットに予約枠の編集が多く写るようにする。
+// 撮影のためだけの使い捨てのブラウザなので、秘密鍵は RFC 6238 のテスト用の値でよい
+await worker.evaluate(
+  async ({ schedule, secret }) => {
+    await chrome.storage.sync.set({ schedule, totpSecret: secret });
+  },
+  { schedule: SCHEDULE, secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ' },
+);
 
 const page = await context.newPage();
 await page.goto(`chrome-extension://${extensionId}/options.html`);
