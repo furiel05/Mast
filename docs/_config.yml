@@ -1,0 +1,8 @@
+# GitHub Pages（https://furiel05.github.io/Mast/）の設定。
+# 公開するのはプライバシーポリシーだけにする。仕様書とストア用のメモはリポジトリの中の資料なので、ページにはしない
+title: Mast
+description: Watch-time limits for YouTube
+lang: ja
+exclude:
+  - spec.md
+  - store-listing.md

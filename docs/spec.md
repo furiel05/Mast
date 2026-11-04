@@ -167,6 +167,7 @@ Mastは、自分で入れて自分を縛るための拡張機能として、Chro
 - 拡張機能ID：`fhigbpfajaapjhbihcldbofnehjojhda`
 - 開発中のビルド（パッケージ化されていない拡張機能として読み込むもの）には、あえてストア版と別のIDを使う。`chrome.storage.sync` は拡張機能IDごとに分かれるため、同じIDにすると、開発中の試行でストア版の予約枠や秘密鍵を上書きしてしまう
 - 集めたデータは開発者のサーバーには送らない。すべて `chrome.storage` に保存し、端末間の受け渡しはChromeの同期だけを使う。このことをプライバシーポリシー（`docs/privacy.md`）に書き、ストアの「プライバシーへの取り組み」にも同じ内容を申告する
+  - プライバシーポリシーは GitHub Pages で公開する（<https://furiel05.github.io/Mast/privacy/>）。`docs` フォルダを公開元にし、仕様書などはページにしない（`docs/_config.yml`）
 - ストアに載せる説明文・権限の理由などは `docs/store-listing.md` にまとめる
 
 ## 設定の同期
