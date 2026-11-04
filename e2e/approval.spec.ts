@@ -8,6 +8,7 @@ import {
   test,
   totpCode,
 } from './fixtures';
+import { setAllDay } from './schedule-editor';
 
 // Service Worker の中で動かすコードから使う
 declare const chrome: typeof browser;
@@ -52,10 +53,9 @@ test('設定後は、広げる変更を認証アプリのコードで申請し�
   await setSchedule(BLOCK_ALL, true);
   await page.goto(`chrome-extension://${extensionId}/options.html`);
 
-  const label = WEEKDAY_LABELS[logicalWeekday()];
-  await page.getByLabel(`${label}の種類`).selectOption('時間帯');
-  await page.getByLabel(`${label}の開始`).selectOption({ label: '4:00' });
-  await page.getByLabel(`${label}の終了`).selectOption({ label: '翌4:00' });
+  const label = WEEKDAY_LABELS[logicalWeekday()] ?? '';
+  await page.getByRole('switch', { name: `${label}に見る` }).click();
+  await setAllDay(page, label);
   await expect(page.getByText('申請すると、24時間後に反映されます')).toBeVisible();
 
   await page.getByLabel('認証アプリのコード').fill('000000');
@@ -70,9 +70,9 @@ test('設定後は、広げる変更を認証アプリのコードで申請し�
     /^申請しました。明日（.）\d+:\d\d に反映されます$/,
   );
   const pending = page.getByRole('region', { name: '予約中の変更' });
-  await expect(pending.getByRole('listitem')).toHaveText([`${label}：見ない日 → 4:00〜翌4:00`]);
+  await expect(pending.getByRole('listitem')).toHaveText([`${label}：見ない日 → いつでも`]);
   // 編集欄は今有効な予約枠に戻る
-  await expect(page.getByLabel(`${label}の種類`)).toHaveValue('none');
+  await expect(page.getByRole('switch', { name: `${label}に見る` })).not.toBeChecked();
   await waitForBlocking(true, requestedAt);
 });
 
@@ -156,7 +156,7 @@ test('予約中に狭める変更を保存すると、予約中の変更は取�
   await page.goto(`chrome-extension://${extensionId}/options.html`);
   await expect(page.getByRole('region', { name: '予約中の変更' })).toBeVisible();
 
-  await page.getByLabel('火曜日の種類').selectOption('見ない日');
+  await page.getByRole('switch', { name: '火曜日に見る' }).click();
   await expect(page.getByText('保存すると、予約中の変更は取り消されます。')).toBeVisible();
   await page.getByRole('button', { name: '保存する' }).click();
 

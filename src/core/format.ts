@@ -1,3 +1,4 @@
+import { DAY_END_MINUTE, DAY_START_MINUTE } from './day';
 import type { DayRule, TimeRange } from './schedule';
 
 const WEEKDAY_SHORT = ['日', '月', '火', '水', '木', '金', '土'] as const;
@@ -50,7 +51,8 @@ export function formatDuration(ms: number): string {
 
 /**
  * 1日分のルールを短い文にする。予約中の変更の内容を見せるのに使う。
- * 例：「見ない日」「20:00〜23:00」「60分まで」「20:00〜23:00のうち60分まで」
+ * 画面と同じく「予算」とは書かない（docs/spec.md「設定画面」）。
+ * 例：「見ない日」「20:00〜23:00」「いつでも」「いつでも（1日1時間まで）」「20:00〜23:00のうち1時間まで」
  */
 export function describeRule(rule: DayRule): string {
   switch (rule.type) {
@@ -59,12 +61,19 @@ export function describeRule(rule: DayRule): string {
     case 'window':
       return describeRange(rule.window);
     case 'budget':
-      return `${rule.budgetMinutes}分まで`;
+      return `いつでも（1日${describeLimit(rule.budgetMinutes)}まで）`;
     case 'combined':
-      return `${describeRange(rule.window)}のうち${rule.budgetMinutes}分まで`;
+      return `${describeRange(rule.window)}のうち${describeLimit(rule.budgetMinutes)}まで`;
   }
 }
 
 function describeRange(range: TimeRange): string {
+  if (range.start === DAY_START_MINUTE && range.end === DAY_END_MINUTE) {
+    return 'いつでも';
+  }
   return `${formatTimeOfDay(range.start)}〜${formatTimeOfDay(range.end)}`;
+}
+
+function describeLimit(minutes: number): string {
+  return formatDuration(minutes * 60_000);
 }

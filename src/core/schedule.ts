@@ -192,7 +192,7 @@ function validateRule(rule: DayRule): string[] {
   if (rule.type === 'budget' || rule.type === 'combined') {
     const { budgetMinutes } = rule;
     if (!Number.isInteger(budgetMinutes) || budgetMinutes < 0 || budgetMinutes > 24 * 60) {
-      errors.push('予算は0〜1440分の整数で指定してください');
+      errors.push('1日の上限は0〜1440分の整数で指定してください');
     }
   }
   return errors;
